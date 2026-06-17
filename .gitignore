@@ -1,0 +1,26 @@
+# Secrets — NEVER commit
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Django build artifacts
+staticfiles/
+export.json
+
+# Generated / large data
+data_pdf/
+data_img/
+output/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store

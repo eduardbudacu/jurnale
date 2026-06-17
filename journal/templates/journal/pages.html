@@ -1,0 +1,23 @@
+{% extends "journal/layout.html" %}
+{% block content %}
+<div class="breadcrumb"><a href="/">Journals</a> / {{ journal.filename }}</div>
+<h2 style="margin-bottom:16px">{{ journal.filename }}</h2>
+<div class="stats">
+  <div class="stat"><div class="value">{{ journal.page_count }}</div><div class="label">Pages</div></div>
+  <div class="stat"><div class="value">{{ done }}</div><div class="label">Done</div></div>
+  <div class="stat"><div class="value">{{ pending }}</div><div class="label">Pending</div></div>
+</div>
+<table>
+<thead><tr><th>#</th><th>Status</th><th>Characters</th><th>Provider</th><th>Processed</th></tr></thead>
+<tbody>
+{% for p in pages %}
+<tr>
+  <td><a href="/journal/{{ journal.id }}/page/{{ p.page_number }}">Page {{ p.page_number }}</a></td>
+  <td><span class="badge badge-{{ p.status }}">{{ p.status }}</span></td>
+  <td>{{ p.chars }}</td>
+  <td>{{ p.ocr_provider|default:"—" }}</td>
+  <td>{{ p.processed_at|default:"—" }}</td>
+</tr>
+{% endfor %}
+</tbody></table>
+{% endblock %}

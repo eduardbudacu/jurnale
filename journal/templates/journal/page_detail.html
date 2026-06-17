@@ -1,0 +1,25 @@
+{% extends "journal/layout.html" %}
+{% block content %}
+<div class="breadcrumb"><a href="/">Journals</a> / <a href="/journal/{{ journal.id }}">{{ journal.filename }}</a> / Page {{ page.page_number }}</div>
+<div class="page-nav">
+  {% if prev %}<a href="/journal/{{ journal.id }}/page/{{ prev }}">&larr; Page {{ prev }}</a>{% else %}<span>&larr;</span>{% endif %}
+  <strong>Page {{ page.page_number }} of {{ journal.page_count }}</strong>
+  {% if next %}<a href="/journal/{{ journal.id }}/page/{{ next }}">Page {{ next }} &rarr;</a>{% else %}<span>&rarr;</span>{% endif %}
+</div>
+<div class="page-detail">
+  <div class="page-image"><img src="/image/{{ journal.id }}/{{ page.page_number }}" alt="Page {{ page.page_number }}"></div>
+  <div class="page-text">
+    <div class="status-badge"><span class="badge badge-{{ page.status }}">{{ page.status }}</span></div>
+    {% if page.ocr_text %}<pre>{{ page.ocr_text }}</pre>{% else %}<div class="empty">No OCR text yet.</div>{% endif %}
+    {% if page.error %}<div class="error-message">Error: {{ page.error }}</div>{% endif %}
+    {% if metadata %}
+    <div class="metadata-section">
+      <h3>METADATA</h3>
+      {% if metadata.date_value %}<div class="metadata-row"><strong>Date:</strong> {{ metadata.date_value }}</div>{% endif %}
+      {% if metadata.summary %}<div class="metadata-row"><strong>Summary:</strong> {{ metadata.summary }}</div>{% endif %}
+      {% if meta_tags %}<div><strong>Tags:</strong> {% for t in meta_tags %}<span class="badge badge-processing" style="margin-right:4px">{{ t }}</span>{% endfor %}</div>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

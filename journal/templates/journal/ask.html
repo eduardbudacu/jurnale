@@ -1,0 +1,42 @@
+{% extends "journal/layout.html" %}
+{% block content %}
+<h2 style="margin-bottom:16px">Ask your journals</h2>
+
+<form method="get" action="/ask" style="display:flex;gap:12px;margin-bottom:24px;align-items:center;flex-wrap:wrap">
+  <input type="text" name="q" value="{{ query }}" placeholder="e.g. What was I worried about in the winter of 2013?" style="flex:1;min-width:280px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:15px;outline:none" autofocus>
+  <button type="submit" style="padding:10px 20px;background:var(--accent);border:none;border-radius:6px;color:#fff;font-size:14px;font-weight:600;cursor:pointer">Ask</button>
+</form>
+
+{% if error %}
+<div style="padding:16px;background:rgba(248,81,73,0.1);border:1px solid var(--red);border-radius:8px;color:var(--red);margin-bottom:24px">{{ error }}</div>
+{% endif %}
+
+{% if answer %}
+<div class="page-text" style="margin-bottom:24px">
+  <div style="white-space:pre-wrap;font-size:15px;line-height:1.7">{{ answer }}</div>
+</div>
+{% endif %}
+
+{% if sources %}
+<div class="metadata-section" style="margin-top:0">
+  <h3>Sources ({{ sources|length }})</h3>
+  <table>
+  <thead><tr><th style="width:36px">#</th><th style="width:60px">Score</th><th>Summary</th><th>Journal</th><th>Page</th><th>Date</th><th>Tags</th></tr></thead>
+  <tbody>
+  {% for s in sources %}
+  <tr>
+    <td style="color:var(--muted)">[{{ s.n }}]</td>
+    <td><span class="badge badge-done">{{ s.score }}</span></td>
+    <td><a href="/journal/{{ s.journal_id }}/page/{{ s.page_number }}">{{ s.summary|slice:":150" }}{% if s.summary|length > 150 %}...{% endif %}</a></td>
+    <td style="white-space:nowrap">{{ s.filename }}</td>
+    <td>{{ s.page_number }}</td>
+    <td style="white-space:nowrap">{{ s.date }}</td>
+    <td>{% for tag in s.tags %}<span class="badge badge-processing">{{ tag }}</span> {% endfor %}</td>
+  </tr>
+  {% endfor %}
+  </tbody></table>
+</div>
+{% elif not query %}
+<p style="color:var(--muted)">Ask a question in natural language and get a grounded answer synthesized from your journal pages, with citations [1], [2]… linking to the source pages below.</p>
+{% endif %}
+{% endblock %}

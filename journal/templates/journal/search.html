@@ -1,0 +1,46 @@
+{% extends "journal/layout.html" %}
+{% block content %}
+<h2 style="margin-bottom:16px">Semantic Search</h2>
+
+<form method="get" action="/search" style="display:flex;gap:12px;margin-bottom:24px;align-items:center;flex-wrap:wrap">
+  <input type="text" name="q" value="{{ query }}" placeholder="Search page summaries..." style="flex:1;min-width:250px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:15px;outline:none" autofocus>
+  <select name="n" style="padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;cursor:pointer">
+    <option value="5" {% if limit == 5 %}selected{% endif %}>5 results</option>
+    <option value="10" {% if limit == 10 %}selected{% endif %}>10 results</option>
+    <option value="20" {% if limit == 20 %}selected{% endif %}>20 results</option>
+    <option value="50" {% if limit == 50 %}selected{% endif %}>50 results</option>
+  </select>
+  <button type="submit" style="padding:10px 20px;background:var(--accent);border:none;border-radius:6px;color:#fff;font-size:14px;font-weight:600;cursor:pointer">Search</button>
+</form>
+
+{% if error %}
+<div style="padding:16px;background:rgba(248,81,73,0.1);border:1px solid var(--red);border-radius:8px;color:var(--red);margin-bottom:24px">{{ error }}</div>
+{% endif %}
+
+{% if query and not error %}
+<div class="stats">
+  <div class="stat"><div class="value">{{ results|length }}</div><div class="label">Results</div></div>
+</div>
+
+{% if results %}
+<table>
+<thead><tr><th style="width:60px">Score</th><th>Summary</th><th>Journal</th><th>Page</th><th>Date</th><th>Tags</th></tr></thead>
+<tbody>
+{% for r in results %}
+<tr>
+  <td><span class="badge badge-done">{{ r.score }}</span></td>
+  <td><a href="/journal/{{ r.journal_id }}/page/{{ r.page_number }}">{{ r.summary|slice:":150" }}{% if r.summary|length > 150 %}...{% endif %}</a></td>
+  <td style="white-space:nowrap">{{ r.filename }}</td>
+  <td>{{ r.page_number }}</td>
+  <td style="white-space:nowrap">{{ r.date }}</td>
+  <td>{% for tag in r.tags %}<span class="badge badge-processing">{{ tag }}</span> {% endfor %}</td>
+</tr>
+{% endfor %}
+</tbody></table>
+{% else %}
+<p style="color:var(--muted)">No results found.</p>
+{% endif %}
+{% elif not query %}
+<p style="color:var(--muted)">Enter a query to search across page summaries using semantic similarity.</p>
+{% endif %}
+{% endblock %}

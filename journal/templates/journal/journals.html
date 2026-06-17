@@ -1,0 +1,26 @@
+{% extends "journal/layout.html" %}
+{% block content %}
+<div class="stats">
+  <div class="stat"><div class="value">{{ total_journals }}</div><div class="label">Journals</div></div>
+  <div class="stat"><div class="value">{{ total_pages }}</div><div class="label">Total Pages</div></div>
+  <div class="stat"><div class="value">{{ done_pages }}</div><div class="label">OCR Done</div></div>
+  <div class="stat">
+    <div class="value">{{ pct }}%</div><div class="label">Progress</div>
+    <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" style="width:{{ pct }}%"></div></div>
+  </div>
+</div>
+<table>
+<thead><tr><th>Journal</th><th>Pages</th><th>Done</th><th>Pending</th><th>Failed</th><th>Progress</th></tr></thead>
+<tbody>
+{% for j in journals %}
+<tr>
+  <td><a href="/journal/{{ j.id }}">{{ j.filename }}</a></td>
+  <td>{{ j.page_count }}</td>
+  <td>{{ j.done }}</td>
+  <td>{{ j.pending }}</td>
+  <td>{{ j.failed }}</td>
+  <td><div class="progress-bar"><div class="progress-fill" style="width:{{ j.pct }}%"></div></div></td>
+</tr>
+{% endfor %}
+</tbody></table>
+{% endblock %}

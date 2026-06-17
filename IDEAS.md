@@ -1,0 +1,8 @@
+- create a timeline similar to google photos
+- try to extract dates from each page
+- create metadata for each page from extracted text [x]
+- - date
+- - topic
+- create an export all data to json
+- make a page with token statistics for the ocr content
+- create a new table ocr_jobs 

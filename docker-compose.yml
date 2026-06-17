@@ -1,0 +1,98 @@
+services:
+  db:
+    image: pgvector/pgvector:pg15
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-jurnale}
+      POSTGRES_USER: ${POSTGRES_USER:-jurnale}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jurnale}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-jurnale}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # Django dashboard (gunicorn). Runs migrations on startup, then serves :8081.
+  web:
+    build: .
+    environment:
+      RUN_MIGRATIONS: "1"
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./data_pdf:/app/data_pdf
+      - ./data_img:/app/data_img
+    ports:
+      - "8081:8080"
+    restart: unless-stopped
+
+  # --- Pipeline workers (opt-in: `docker compose --profile pipeline up`) -------
+  # Each worker drains its queue and exits when empty. For ad-hoc runs prefer:
+  #   docker compose run --rm web python manage.py <command>
+  ocr-worker:
+    build: .
+    profiles: ["pipeline"]
+    command: ["python", "manage.py", "ocr_worker"]
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./data_img:/app/data_img
+    restart: "no"
+
+  metadata-worker:
+    build: .
+    profiles: ["pipeline"]
+    command: ["python", "manage.py", "metadata_worker", "-n", "2"]
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  embeddings-worker:
+    build: .
+    profiles: ["pipeline"]
+    command: ["python", "manage.py", "embeddings_worker", "-n", "2"]
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  content-embeddings-worker:
+    build: .
+    profiles: ["pipeline"]
+    command: ["python", "manage.py", "content_embeddings_worker", "-n", "2"]
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  # --- Optional DB GUI (opt-in: `docker compose --profile tools up dbhub`) -----
+  dbhub:
+    image: bytebase/dbhub:latest
+    profiles: ["tools"]
+    depends_on:
+      db:
+        condition: service_healthy
+    command:
+      - --transport
+      - http
+      - --port
+      - "8080"
+      - --dsn
+      - "postgres://${POSTGRES_USER:-jurnale}:${POSTGRES_PASSWORD:-jurnale}@db:5432/${POSTGRES_DB:-jurnale}"
+    ports:
+      - "8099:8080"
+
+volumes:
+  pgdata:

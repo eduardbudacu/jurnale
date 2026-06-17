@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker compose build:*)",
+      "Bash(docker compose up:*)",
+      "Bash(docker compose run:*)",
+      "Bash(dir:*)",
+      "Bash(docker compose exec:*)",
+      "Bash(docker compose cp:*)",
+      "Bash(docker-compose build:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(docker-compose exec app python:*)",
+      "Bash(docker-compose logs:*)",
+      "Bash(docker-compose run:*)",
+      "Bash(docker compose restart:*)",
+      "mcp__dbhub__search_objects",
+      "mcp__dbhub__execute_sql",
+      "Bash(python manage.py check)",
+      "Bash(python manage.py makemigrations journal)"
+    ]
+  }
+}

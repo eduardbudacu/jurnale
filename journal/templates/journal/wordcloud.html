@@ -1,0 +1,16 @@
+{% extends "journal/layout.html" %}
+{% load static %}
+{% block content %}
+<h2 style="margin-bottom:16px">Word Cloud</h2>
+<div class="stats">
+  <div class="stat"><div class="value">{{ total_words }}</div><div class="label">Unique Words</div></div>
+  <div class="stat"><div class="value">{{ total_occurrences }}</div><div class="label">Total Occurrences</div></div>
+</div>
+<div id="cloud-container" class="cloud-container">
+  <canvas id="cloud-canvas"></canvas>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{% static 'journal/wordcloud.js' %}"></script>
+<script>initWordCloud({{ words_json }});</script>
+{% endblock %}

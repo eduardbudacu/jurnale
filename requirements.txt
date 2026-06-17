@@ -1,0 +1,17 @@
+# Web framework
+Django>=6.0,<7
+gunicorn>=21,<27
+whitenoise>=6.6,<7
+
+# Database
+psycopg[binary]>=3.1,<4
+pgvector>=0.3,<1
+dj-database-url>=2.1,<4
+
+# Pipeline / AI
+PyMuPDF>=1.24,<2
+openai>=1.40,<3
+Pillow>=10,<12
+requests>=2.31,<3
+scikit-learn>=1.4,<2
+numpy>=1.26,<3

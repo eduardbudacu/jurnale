@@ -1,0 +1,88 @@
+{% extends "journal/layout.html" %}
+{% block content %}
+<h2 style="margin-bottom:16px">Embeddings — {% if source == 'content' %}Content{% else %}Summary{% endif %} Scatter Plot</h2>
+<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap">
+  <div class="stats" style="margin-bottom:0">
+    <div class="stat"><div class="value">{{ total_points }}</div><div class="label">Embedded Pages</div></div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <a href="/embeddings?source=summary"
+       style="padding:6px 14px;border-radius:6px;text-decoration:none;font-size:14px;
+              {% if source == 'summary' %}background:#58a6ff;color:#0d1117;font-weight:600{% else %}background:var(--surface);color:var(--muted);border:1px solid var(--border){% endif %}">
+      Summary
+    </a>
+    <a href="/embeddings?source=content"
+       style="padding:6px 14px;border-radius:6px;text-decoration:none;font-size:14px;
+              {% if source == 'content' %}background:#58a6ff;color:#0d1117;font-weight:600{% else %}background:var(--surface);color:var(--muted);border:1px solid var(--border){% endif %}">
+      Content
+    </a>
+  </div>
+</div>
+<div id="scatter-container" style="width:100%;height:750px;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden"></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
+<script>
+(function() {
+  const points = {{ points_json }};
+  if (!points.length) {
+    document.getElementById('scatter-container').innerHTML =
+      '<p style="padding:40px;color:#8b949e">No embeddings available yet. Run the embeddings pipeline first.</p>';
+    return;
+  }
+
+  const x = points.map(p => p.x);
+  const y = points.map(p => p.y);
+  const labels = points.map(p => p.summary);
+  const tags = points.map(p => p.tags);
+  const dates = points.map(p => p.date || 'unknown');
+  const pageIds = points.map(p => p.page_id);
+  const journalIds = points.map(p => p.journal_id);
+  const pageNums = points.map(p => p.page_number);
+
+  const hoverText = points.map(p => {
+    let t = '<b>' + (p.date || 'No date') + '</b><br>';
+    t += p.summary.substring(0, 120);
+    if (p.summary.length > 120) t += '...';
+    if (p.tags) t += '<br><i>' + p.tags + '</i>';
+    return t;
+  });
+
+  const trace = {
+    x: x, y: y,
+    mode: 'markers',
+    type: 'scatter',
+    text: hoverText,
+    hoverinfo: 'text',
+    marker: {
+      size: 7,
+      color: y,
+      colorscale: [[0,'#58a6ff'],[0.5,'#bc8cff'],[1,'#f85149']],
+      opacity: 0.75,
+      line: { width: 0.5, color: '#30363d' }
+    }
+  };
+
+  const layout = {
+    paper_bgcolor: '#161b22',
+    plot_bgcolor: '#0d1117',
+    font: { color: '#e6edf3', family: '-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif' },
+    xaxis: { title: 'Component 1', gridcolor: '#30363d', zerolinecolor: '#30363d' },
+    yaxis: { title: 'Component 2', gridcolor: '#30363d', zerolinecolor: '#30363d' },
+    margin: { l: 60, r: 30, t: 30, b: 60 },
+    hovermode: 'closest'
+  };
+
+  const config = { responsive: true, displayModeBar: true, displaylogo: false };
+
+  Plotly.newPlot('scatter-container', [trace], layout, config);
+
+  // Click to navigate to page detail
+  document.getElementById('scatter-container').on('plotly_click', function(data) {
+    const idx = data.points[0].pointIndex;
+    window.location.href = '/journal/' + journalIds[idx] + '/page/' + pageNums[idx];
+  });
+})();
+</script>
+{% endblock %}

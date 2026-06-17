@@ -1,0 +1,116 @@
+@startuml Jurnale Database Schema
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam linetype ortho
+
+title Jurnale — Database Schema (PostgreSQL 15 + pgvector)
+
+entity "journals" as journals {
+  * **id** : integer <<PK, auto>>
+  --
+  * **filename** : text <<UNIQUE>>
+  * **file_path** : text
+    page_count : integer
+    indexed_at : timestamptz = now()
+}
+
+entity "pages" as pages {
+  * **id** : integer <<PK, auto>>
+  --
+  * **journal_id** : integer <<FK>>
+  * **page_number** : integer
+    image_path : text
+  * **status** : text = 'pending'
+    ocr_text : text
+    ocr_provider : text
+    ocr_model : text
+    error : text
+    processed_at : timestamptz
+    created_at : timestamptz = now()
+  ..
+  <<UNIQUE>> (journal_id, page_number)
+  <<INDEX>> idx_pages_status (status)
+}
+
+entity "page_metadata" as metadata {
+  * **id** : integer <<PK, auto>>
+  --
+  * **page_id** : integer <<FK, UNIQUE>>
+  * **status** : text = 'pending'
+    date_value : text
+    summary : text
+    error : text
+    processed_at : timestamptz
+    created_at : timestamptz = now()
+  ..
+  <<INDEX>> idx_page_metadata_status (status)
+}
+
+entity "page_metadata_tags" as tags {
+  * **id** : integer <<PK, auto>>
+  --
+  * **page_metadata_id** : integer <<FK>>
+  * **tag** : text
+  ..
+  <<INDEX>> idx_page_metadata_tags_tag (tag)
+}
+
+entity "page_summary_embeddings" as summary_emb {
+  * **id** : integer <<PK, auto>>
+  --
+  * **page_id** : integer <<FK, UNIQUE>>
+  * **status** : text = 'pending'
+    embedding : vector(3072)
+    error : text
+    processed_at : timestamptz
+    created_at : timestamptz = now()
+  ..
+  <<INDEX>> idx_page_summary_embeddings_status (status)
+}
+
+entity "page_content_embeddings" as content_emb {
+  * **id** : integer <<PK, auto>>
+  --
+  * **page_id** : integer <<FK, UNIQUE>>
+  * **status** : text = 'pending'
+    embedding : vector(3072)
+    error : text
+    processed_at : timestamptz
+    created_at : timestamptz = now()
+  ..
+  <<INDEX>> idx_page_content_embeddings_status (status)
+}
+
+' --- Relationships ---
+journals ||--o{ pages : "1 journal → many pages"
+pages ||--o| metadata : "1 page → 0..1 metadata"
+metadata ||--o{ tags : "1 metadata → many tags"
+pages ||--o| summary_emb : "1 page → 0..1 summary embedding"
+pages ||--o| content_emb : "1 page → 0..1 content embedding"
+
+' --- Notes ---
+note bottom of pages
+  Work queue: workers claim rows using
+  SELECT ... FOR UPDATE SKIP LOCKED
+  Status: pending → processing → done | failed
+end note
+
+note bottom of summary_emb
+  pgvector extension
+  Cosine distance: <=>
+  Search score =
+    0.6 × (1 - summary_dist)
+  + 0.4 × (1 - content_dist)
+end note
+
+note right of journals
+  **Row counts (live)**
+  journals: 37
+  pages: 4,515
+  page_metadata: 4,514
+  page_metadata_tags: 21,426
+  page_summary_embeddings: 4,513
+  page_content_embeddings: 4,514
+end note
+
+@enduml
