@@ -5,10 +5,13 @@ from collections import Counter
 from pathlib import Path
 
 import numpy as np
+from django.contrib.auth import views as auth_views
+from django.contrib.messages.views import SuccessMessageMixin
 from django.db import connection
 from django.db.models import Count, Q
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, render
+from django.urls import reverse_lazy
 from django.utils.safestring import mark_safe
 
 from .models import Journal, Page, PageMetadata, PageMetadataTag
@@ -28,6 +31,13 @@ RAG_SYSTEM_PROMPT = (
     "it with its bracketed number, e.g. [1] or [2][3]. If the excerpts do not "
     "contain enough to answer, say so honestly rather than guessing. Be concise."
 )
+
+
+class PasswordChangeView(SuccessMessageMixin, auth_views.PasswordChangeView):
+    template_name = "journal/password_change.html"
+    success_url = reverse_lazy("index")
+    success_message = "Your password was changed."
+    extra_context = {"title": "Change password"}
 
 
 def _dictfetchall(cursor) -> list[dict]:

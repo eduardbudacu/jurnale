@@ -33,11 +33,17 @@ docker compose up -d --build db web
   already-populated database — see MIGRATION.md), then serves gunicorn.
 - Dashboard: **http://localhost:8081**
 
-Create an admin user (optional, enables `/admin/`):
+The dashboard requires login. Create the first account (a superuser can also
+manage further users at `/admin/`):
 
 ```bash
 docker compose run --rm web python manage.py createsuperuser
 ```
+
+Alternatively set `DJANGO_SUPERUSER_USERNAME` / `DJANGO_SUPERUSER_PASSWORD` in
+`.env` and the `web` container creates it on startup if it does not exist.
+Additional users: `/admin/` → Users → Add (no self-service sign-up). Users change
+their own password via the **Password** link in the header.
 
 ## 3. Run the pipeline
 

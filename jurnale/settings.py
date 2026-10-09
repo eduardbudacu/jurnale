@@ -42,6 +42,8 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # Every view requires a logged-in user unless marked @login_not_required.
+    "django.contrib.auth.middleware.LoginRequiredMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -81,7 +83,15 @@ DATABASES = {
 # the legacy tables line up exactly (enables migrate --fake-initial).
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
-# --- Password validation (admin only) --------------------------------------
+# --- Authentication ---------------------------------------------------------
+# The whole dashboard is private. Users are managed via /admin/ or
+# `manage.py createsuperuser`; there is no self-service sign-up.
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "index"
+LOGOUT_REDIRECT_URL = "login"
+SESSION_COOKIE_AGE = int(os.environ.get("DJANGO_SESSION_AGE", str(60 * 60 * 24 * 14)))
+
+# --- Password validation ----------------------------------------------------
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},

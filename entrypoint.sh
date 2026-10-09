@@ -31,6 +31,12 @@ PYEOF
 if [ "${RUN_MIGRATIONS:-0}" = "1" ]; then
     echo "Applying migrations..."
     python manage.py migrate --fake-initial --noinput
+
+    # Bootstrap the first dashboard login from DJANGO_SUPERUSER_USERNAME /
+    # DJANGO_SUPERUSER_PASSWORD (/ DJANGO_SUPERUSER_EMAIL). No-op if it exists.
+    if [ -n "${DJANGO_SUPERUSER_USERNAME:-}" ] && [ -n "${DJANGO_SUPERUSER_PASSWORD:-}" ]; then
+        python manage.py createsuperuser --noinput 2>/dev/null             && echo "Created superuser ${DJANGO_SUPERUSER_USERNAME}."             || echo "Superuser ${DJANGO_SUPERUSER_USERNAME} already exists (or could not be created)."
+    fi
 fi
 
 exec "$@"

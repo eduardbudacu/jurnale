@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="{% static 'journal/style.css' %}">
 </head>
 <body>
-<header><div class="container"><h1><a href="/">Jurnale</a></h1><nav><a href="/">Journals</a> <a href="/tags">Tags</a> <a href="/wordcloud">Word Cloud</a> <a href="/embeddings">Embeddings</a> <a href="/search">Search</a> <a href="/ask">Ask</a></nav></div></header>
-<div class="container">{% block content %}{% endblock %}</div>
+<header><div class="container"><h1><a href="/">Jurnale</a></h1>{% if user.is_authenticated %}<nav><a href="/">Journals</a> <a href="/tags">Tags</a> <a href="/wordcloud">Word Cloud</a> <a href="/embeddings">Embeddings</a> <a href="/search">Search</a> <a href="/ask">Ask</a></nav><div class="user-menu"><span>{{ user.get_username }}</span> <a href="{% url 'password_change' %}">Password</a>{% if user.is_staff %} <a href="/admin/">Admin</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Log out</button></form></div>{% endif %}</div></header>
+<div class="container">{% if messages %}{% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}{% endif %}{% block content %}{% endblock %}</div>
 {% block scripts %}{% endblock %}
 </body></html>

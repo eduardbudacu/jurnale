@@ -69,6 +69,7 @@ python manage.py runserver 8080
 - **Schema**: Managed by Django migrations. On an existing populated DB use `migrate --fake-initial` (the container entrypoint does this automatically) so legacy data is adopted without modification.
 - **OCR providers**: Registry in `services/ocr/__init__.py`, configured via `OCR_PROVIDER` env var. Currently only OpenAI.
 - **Metadata/Embeddings**: Ollama (local LLM) or OpenAI via HTTP. Models via `METADATA_MODEL`, `EMBEDDING_MODEL`/`OPENAI_EMBEDDING_MODEL`. Query and stored embeddings must share a provider+model (routed through `services/embeddings.embed_text`).
+- **Authentication**: `LoginRequiredMiddleware` makes every view private; login/logout/password-change live in `journal/urls.py` (`/login`, `/logout`, `/password`). Mark any new public view with `@login_not_required`. Users are managed via `/admin/` or `createsuperuser`.
 - **No automated test suite or linter** configured currently.
 
 ## Database
