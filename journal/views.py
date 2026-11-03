@@ -15,12 +15,11 @@ from django.urls import reverse_lazy
 from django.utils.safestring import mark_safe
 
 from .models import Journal, Page, PageMetadata, PageMetadataTag
-from .services.embeddings import embed_text
+from .services.search import embed_query, excerpt, retrieve_pages
 
 # RAG ("Ask your journals") — answer synthesis uses the OpenAI chat API.
 ANSWER_MODEL = os.environ.get("ANSWER_MODEL", "gpt-4o")
 RAG_TOP_K = int(os.environ.get("RAG_TOP_K", "8"))
-RAG_EXCERPT_CHARS = int(os.environ.get("RAG_EXCERPT_CHARS", "1500"))
 
 RAG_SYSTEM_PROMPT = (
     "You are a warm, thoughtful assistant helping someone explore their own "
@@ -222,30 +221,6 @@ def embeddings_view(request):
     })
 
 
-_SEARCH_SQL = """
-    SELECT p.id as page_id, pm.summary, pm.date_value,
-           p.journal_id, p.page_number,
-           j.filename,
-           string_agg(pmt.tag, ', ') as tags,
-           (0.6 * COALESCE(1 - (pse.embedding <=> %s::vector), 0) +
-            0.4 * COALESCE(1 - (pce.embedding <=> %s::vector), 0)) as score
-    FROM pages p
-    JOIN journals j ON j.id = p.journal_id
-    LEFT JOIN page_metadata pm ON pm.page_id = p.id AND pm.status = 'done'
-    LEFT JOIN page_metadata_tags pmt ON pmt.page_metadata_id = pm.id
-    LEFT JOIN page_summary_embeddings pse
-      ON pse.page_id = p.id AND pse.status = 'done' AND pse.embedding IS NOT NULL
-    LEFT JOIN page_content_embeddings pce
-      ON pce.page_id = p.id AND pce.status = 'done' AND pce.embedding IS NOT NULL
-    WHERE pse.embedding IS NOT NULL OR pce.embedding IS NOT NULL
-    GROUP BY p.id, pm.summary, pm.date_value,
-             p.journal_id, p.page_number, j.filename,
-             pse.embedding, pce.embedding
-    ORDER BY score DESC
-    LIMIT %s
-"""
-
-
 def search_view(request):
     query = request.GET.get("q", "").strip()
     try:
@@ -260,7 +235,7 @@ def search_view(request):
 
     if query:
         try:
-            query_emb = _embed_query(query)
+            query_vec = embed_query(query)
         except Exception as e:
             error = f"Failed to embed query: {e}"
             return render(request, "journal/search.html", {
@@ -268,12 +243,7 @@ def search_view(request):
                 "results": [], "error": error,
             })
 
-        query_vec = json.dumps(query_emb.tolist())
-        with connection.cursor() as cur:
-            cur.execute(_SEARCH_SQL, (query_vec, query_vec, limit))
-            rows = _dictfetchall(cur)
-
-        for r in rows:
+        for r in retrieve_pages(query_vec, limit):
             results.append({
                 "score": round(float(r["score"]), 4),
                 "page_id": r["page_id"],
@@ -291,58 +261,19 @@ def search_view(request):
     })
 
 
-def _embed_query(query: str) -> np.ndarray:
-    """Embed a query string, matching the stored embedding space."""
-    return np.array(embed_text(query))
-
-
-_RETRIEVE_SQL = """
-    SELECT p.id as page_id, pm.summary, pm.date_value,
-           p.journal_id, p.page_number, p.ocr_text,
-           j.filename,
-           string_agg(pmt.tag, ', ') as tags,
-           (0.6 * COALESCE(1 - (pse.embedding <=> %s::vector), 0) +
-            0.4 * COALESCE(1 - (pce.embedding <=> %s::vector), 0)) as score
-    FROM pages p
-    JOIN journals j ON j.id = p.journal_id
-    LEFT JOIN page_metadata pm ON pm.page_id = p.id AND pm.status = 'done'
-    LEFT JOIN page_metadata_tags pmt ON pmt.page_metadata_id = pm.id
-    LEFT JOIN page_summary_embeddings pse
-      ON pse.page_id = p.id AND pse.status = 'done' AND pse.embedding IS NOT NULL
-    LEFT JOIN page_content_embeddings pce
-      ON pce.page_id = p.id AND pce.status = 'done' AND pce.embedding IS NOT NULL
-    WHERE pse.embedding IS NOT NULL OR pce.embedding IS NOT NULL
-    GROUP BY p.id, pm.summary, pm.date_value,
-             p.journal_id, p.page_number, p.ocr_text, j.filename,
-             pse.embedding, pce.embedding
-    ORDER BY score DESC
-    LIMIT %s
-"""
-
-
-def _retrieve_pages(query_vec: str, limit: int) -> list[dict]:
-    """Hybrid semantic retrieval (summary + content) returning full page text."""
-    with connection.cursor() as cur:
-        cur.execute(_RETRIEVE_SQL, (query_vec, query_vec, limit))
-        return _dictfetchall(cur)
-
-
 def _synthesize_answer(query: str, rows: list[dict]) -> str:
     """Build a grounded answer from retrieved pages using the OpenAI chat API."""
     from openai import OpenAI
 
     blocks = []
     for i, r in enumerate(rows, start=1):
-        excerpt = (r["ocr_text"] or "").replace("\r", "").strip()
-        if len(excerpt) > RAG_EXCERPT_CHARS:
-            excerpt = excerpt[:RAG_EXCERPT_CHARS] + "…"
         header = f"[{i}] {r['filename']} — page {r['page_number']}"
         if r["date_value"]:
             header += f" — {r['date_value']}"
         lines = [header]
         if r["summary"]:
             lines.append(f"Summary: {r['summary']}")
-        lines.append(f"Excerpt:\n{excerpt}")
+        lines.append(f"Excerpt:\n{excerpt(r['ocr_text'])}")
         blocks.append("\n".join(lines))
     context = "\n\n---\n\n".join(blocks)
 
@@ -367,15 +298,14 @@ def ask_view(request):
 
     if query:
         try:
-            query_emb = _embed_query(query)
+            query_vec = embed_query(query)
         except Exception as e:
             error = f"Failed to embed question: {e}"
             return render(request, "journal/ask.html", {
                 "title": "Ask", "query": query, "answer": None, "sources": [], "error": error,
             })
 
-        query_vec = json.dumps(query_emb.tolist())
-        rows = _retrieve_pages(query_vec, RAG_TOP_K)
+        rows = retrieve_pages(query_vec, RAG_TOP_K)
 
         for i, r in enumerate(rows, start=1):
             sources.append({

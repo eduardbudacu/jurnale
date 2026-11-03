@@ -41,7 +41,9 @@ needed. For first-time setup (`.env`, superuser, pipeline) see
    docker compose logs --tail=50 web
    ```
 
-   The dashboard is served on port 8081.
+   The dashboard is served on port 8081. If the MCP server is enabled, also
+   run `docker compose --profile mcp up -d --build mcp` (see
+   [DEPLOYMENT.md](../DEPLOYMENT.md)).
 
 ## One-liner
 

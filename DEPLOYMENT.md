@@ -96,6 +96,93 @@ docker compose run --rm web python manage.py export_json -o /app/data_img/export
 docker compose --profile tools up -d dbhub   # http://localhost:8099
 ```
 
+## 5. Expose the MCP server (optional)
+
+The `mcp` service lets Claude Code search the journals through
+`https://<your-domain>/mcp`, using a browser login against the dashboard's users.
+It needs HTTPS on a domain that the machine running Claude Code can reach.
+
+### Secure the host first
+
+The MCP login makes this stack reachable from outside. Before exposing it:
+
+- Set a real `DJANGO_SECRET_KEY`, and `DJANGO_ALLOWED_HOSTS` to your domain.
+- Set `DJANGO_DEBUG=0`, `DJANGO_SECURE_PROXY=1`, `DJANGO_SECURE_COOKIES=1`, and
+  `DJANGO_CSRF_TRUSTED_ORIGINS=https://<your-domain>`.
+- Change `POSTGRES_PASSWORD` and don't expose port 5432 to the internet. Compose
+  publishes it by default; firewall it, or set `POSTGRES_PORT=127.0.0.1:5432`.
+- Keep the `tools` profile (`dbhub`) off, and don't expose port 8099.
+- Use strong passwords. Every dashboard user who approves a client can search
+  all journals, because pages have no owner.
+
+### Configure and start
+
+In `.env`:
+
+```bash
+MCP_PUBLIC_URL=https://<your-domain>/mcp
+```
+
+```bash
+docker compose up -d --build db web
+docker compose --profile mcp up -d --build mcp
+```
+
+### Route the paths
+
+On one domain, send `/mcp` and the protected-resource metadata to `mcp` (port
+8091 on the host) and everything else to `web` (port 8081). The proxy must
+forward the original `Host` header, or `mcp` answers `421`.
+
+Caddy:
+
+```
+<your-domain> {
+    @mcp path /mcp /.well-known/oauth-protected-resource /.well-known/oauth-protected-resource/*
+    reverse_proxy @mcp localhost:8091
+    reverse_proxy localhost:8081
+}
+```
+
+nginx (inside the TLS `server` block):
+
+```nginx
+location ~ ^/(mcp$|\.well-known/oauth-protected-resource) {
+    proxy_pass http://localhost:8091;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+location / {
+    proxy_pass http://localhost:8081;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+### Connect Claude Code
+
+```bash
+claude mcp add --transport http jurnale https://<your-domain>/mcp
+```
+
+Then open `/mcp` in a `claude` terminal and authenticate, or run
+`claude mcp login jurnale`. A browser opens on the dashboard login, then on an
+approval page. Afterwards Claude Code has one tool, `search_pages`.
+
+Each search sends the query to the embedding provider, and the results enter your
+Claude session.
+
+### Operate
+
+- Revoke access: delete the application or its tokens at `/admin/` under
+  Django OAuth Toolkit. Access tokens last 1 hour, refresh tokens 30 days.
+- Clear old tokens periodically:
+  `docker compose run --rm web python manage.py cleartokens`
+- Failed logins lock a username + IP pair for an hour after 10 attempts
+  (`AXES_FAILURE_LIMIT`). Behind a proxy that amounts to locking the username.
+  Unlock with `docker compose run --rm web python manage.py axes_reset`.
+- Leave `MCP_PUBLIC_URL` empty to turn the OAuth routes off.
+
 ## Backups
 
 All durable state is the Postgres volume `pgdata` plus `./data_img` (page PNGs).

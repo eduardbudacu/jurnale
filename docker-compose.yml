@@ -32,6 +32,22 @@ services:
       - "8081:8080"
     restart: unless-stopped
 
+  # MCP search endpoint (opt-in: `docker compose --profile mcp up -d mcp`).
+  # Needs MCP_PUBLIC_URL; the proxy routes /mcp and its metadata here (DEPLOYMENT.md).
+  mcp:
+    build: .
+    profiles: ["mcp"]
+    command: ["uvicorn", "journal.mcp_server:app", "--host", "0.0.0.0", "--port", "8090"]
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+      web:
+        condition: service_started
+    ports:
+      - "${MCP_PORT-8091}:8090"
+    restart: unless-stopped
+
   # --- Pipeline workers (opt-in: `docker compose --profile pipeline up`) -------
   # Each worker drains its queue and exits when empty. For ad-hoc runs prefer:
   #   docker compose run --rm web python manage.py <command>

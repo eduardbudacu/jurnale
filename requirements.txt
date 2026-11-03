@@ -1,7 +1,14 @@
 # Web framework
-Django>=6.0,<7
+# Pinned to 6.0: django-oauth-toolkit 3.4 does not yet support 6.1.
+Django>=6.0,<6.1
 gunicorn>=21,<27
 whitenoise>=6.6,<7
+
+# OAuth + MCP
+django-oauth-toolkit>=3.4,<4
+mcp>=2,<3
+uvicorn>=0.30,<1
+django-axes>=8,<10
 
 # Database
 psycopg[binary]>=3.1,<4
