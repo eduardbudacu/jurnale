@@ -1,8 +1,8 @@
 """OAuth pieces the MCP server needs on top of django-oauth-toolkit.
 
-Anyone can register a client (Claude Code does so on first connect), so the
-registration endpoint only accepts what a local MCP client needs. A registered
-client still gets nothing until a logged-in user approves it.
+Anyone can register a client (Claude does so on first connect), so the
+registration endpoint only accepts what Claude Code and Claude connectors need.
+A registered client still gets nothing until a logged-in user approves it.
 """
 import json
 from urllib.parse import urlsplit
@@ -13,11 +13,18 @@ from django.views.decorators.csrf import csrf_exempt
 
 LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "::1"}
 ALLOWED_GRANT_TYPES = {"authorization_code", "refresh_token"}
+# Claude connectors (claude.ai, desktop, mobile) sign in through a hosted callback.
+HOSTED_REDIRECTS = {
+    "https://claude.ai/api/mcp/auth_callback",
+    "https://claude.com/api/mcp/auth_callback",
+}
 
 
-def _is_loopback_redirect(uri) -> bool:
+def _is_allowed_redirect(uri) -> bool:
     if not isinstance(uri, str):
         return False
+    if uri in HOSTED_REDIRECTS:
+        return True
     try:
         parts = urlsplit(uri)
         return parts.scheme == "http" and parts.hostname in LOOPBACK_HOSTS
@@ -26,7 +33,7 @@ def _is_loopback_redirect(uri) -> bool:
 
 
 class LocalClientRegistrationPermission:
-    """Allow open registration only for loopback, authorization-code clients."""
+    """Allow open registration only for Claude's redirects and authorization code."""
 
     def has_permission(self, request) -> bool:
         try:
@@ -39,7 +46,7 @@ class LocalClientRegistrationPermission:
         redirect_uris = data.get("redirect_uris")
         if not isinstance(redirect_uris, list) or not redirect_uris:
             return False
-        if not all(_is_loopback_redirect(uri) for uri in redirect_uris):
+        if not all(_is_allowed_redirect(uri) for uri in redirect_uris):
             return False
 
         grant_types = data.get("grant_types", ["authorization_code"])

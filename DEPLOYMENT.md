@@ -169,6 +169,10 @@ Then open `/mcp` in a `claude` terminal and authenticate, or run
 `claude mcp login jurnale`. A browser opens on the dashboard login, then on an
 approval page. Afterwards Claude Code has one tool, `search_pages`.
 
+To use it from claude.ai or the desktop app instead, add a custom connector with
+the same URL and leave the OAuth client fields empty. Client registration only
+accepts localhost redirects and Claude's hosted callback.
+
 Each search sends the query to the embedding provider, and the results enter your
 Claude session.
 

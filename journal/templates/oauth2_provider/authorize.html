@@ -10,7 +10,7 @@
   <ul>{% for scope in scopes_descriptions %}<li>{{ scope }}</li>{% endfor %}</ul>
   <p>This name is chosen by the application and isn't verified. Sign-in returns to
     <code>{{ form.redirect_uri.value }}</code>. Only continue if you just started
-    this from Claude Code on this computer.</p>
+    this yourself from Claude.</p>
   <form method="post">
     {% csrf_token %}
     {% for field in form %}{% if field.is_hidden %}{{ field }}{% endif %}{% endfor %}
